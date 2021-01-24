@@ -1,0 +1,20 @@
+{{ template "partials/header" .}}
+<h1>Welcome</h2>
+<p>This is a system which allows you to create your own custom Linux
+distribution (computer operating system), which is personalised to your own
+likings.</p>
+
+<p>Let's start with some questions...</p>
+
+<form method="post">
+  <input type="hidden" name="qid" value="1" />
+  <input type="radio" id="myself" name="myself" value="myself" />
+  <label for="myself">For myself</label>
+  <input type="radio" id="someone" name="someone" value="someone" />
+  <label for="someone">For someone else</label>
+  <input type="radio" id="org" name="org" value="org" />
+  <label for="org">For my organisation</label>
+  <input type="radio" id="" name="org" value="org" />
+  <label for="org">For my organisation</label>
+</form>
+{{ template "partials/footer" .}}
