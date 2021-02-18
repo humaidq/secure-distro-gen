@@ -1,0 +1,30 @@
+{{ template "partials/header" .}}
+<h2>Name your OS</h2>
+<p>Pick a name for your personalised operating system!</p>
+
+<form method="post">
+  <div class="form-group">
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" required="1">
+  </div>
+  <div class="form-group">
+    <label for="ver">Version:</label>
+    <input type="text" id="ver" name="ver" required="1" value="0.1">
+  </div>
+  <h2>Further Configuration</h2>
+  <div class="form-group">
+    <label for="kbd">Keyboard layout:</label>
+    <select id="kbd" disabled>
+      <option value="us">us</option>
+    </select> 
+  </div>
+  <div class="form-group">
+    <label for="tz">Default timezone:</label>
+    <select id="kbd" disabled>
+      <option value="us">Asia/Dubai</option>
+    </select> 
+  </div>
+
+  <button class="btn" type="submit">Done</button>
+</form>
+{{ template "partials/footer" .}}

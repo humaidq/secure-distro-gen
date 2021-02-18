@@ -1,0 +1,15 @@
+{{ template "partials/header" .}}
+<h2>{{.Question.Question}}</h2>
+<p>{{.Question.Description}}</p>
+
+<form method="post">
+  <input type="hidden" name="qid" value="{{.Question.QuestionID}}" />
+  {{ range .Question.Options}}
+  <div class="form-group">
+  <input type="radio" id="input-{{.OptionID}}" name="option" value="{{.OptionID}}" />
+  <label for="input-{{.OptionID}}">{{.Option}}</label>
+  </div>
+  {{ end }}
+  <button class="btn" type="submit">{{if .IsLast}}Finish{{else}}Next{{end}}</button>
+</form>
+{{ template "partials/footer" .}}

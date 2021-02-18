@@ -53,6 +53,11 @@ func start(clx *cli.Context) (err error) {
 	m.Use(routes.ContextInit())
 
 	m.Get("/", routes.HomepageHandler)
+	m.Get("/wizard", routes.WizardHandler)
+	m.Post("/wizard", routes.WizardHandler)
+	m.Get("/final", routes.FinalHandler)
+	m.Post("/final", routes.FinalHandler)
+	m.Get("/download", routes.DownloadHandler)
 
 	log.Printf("Starting web server on port %s\n", config.Config.SitePort)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", config.Config.SitePort), m))
