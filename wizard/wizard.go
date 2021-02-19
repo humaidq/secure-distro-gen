@@ -82,9 +82,9 @@ var Questions = []Question{
 		Question:    "How much do you care about usability",
 		Description: "This comes into consideration when configuring security measures that may affect usability",
 		Options: []Option{
-			{OptionID: "high", Option: "High: I really care about usability, and I don't mind if it affects usability"},
+			{OptionID: "high", Option: "High: I really care about usability, and I don't mind if it affects security"},
 			{OptionID: "medium", Option: "Medium: I don't really mind if some security measures affect usability"},
-			{OptionID: "low", Option: "Low: I don't care if security drastically affects security"},
+			{OptionID: "low", Option: "Low: I don't care if security drastically affects usability"},
 		},
 	},
 	{
