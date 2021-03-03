@@ -24,14 +24,16 @@ var (
 
 // Configuration represents the configuration file format.
 type Configuration struct {
-	SiteName string // SiteName is the name of the site.
-	SitePort string // SitePort is the port to run the web server on.
+	SiteName    string // SiteName is the name of the site.
+	SitePort    string // SitePort is the port to run the web server on.
+	OrigISOFile string // OrigISOFile is the base file used to generate the system.
 }
 
 func newConfig() Configuration {
 	return Configuration{
-		SiteName: "Platform",
-		SitePort: "8080",
+		SiteName:    "Platform",
+		SitePort:    "8080",
+		OrigISOFile: "base.iso",
 	}
 }
 
