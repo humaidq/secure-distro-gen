@@ -29,6 +29,9 @@ type buildSession struct {
 // Customisation contains all the customisable parts of a Linux distribution.
 type Customisation struct {
 	DistName, DistVer string
+	AddPackages       []string
+	RemovePackages    []string
+	TZ, Kbd           string
 }
 
 func Start(cust Customisation) {

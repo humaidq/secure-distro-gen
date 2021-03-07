@@ -27,13 +27,15 @@ type Configuration struct {
 	SiteName    string // SiteName is the name of the site.
 	SitePort    string // SitePort is the port to run the web server on.
 	OrigISOFile string // OrigISOFile is the base file used to generate the system.
+	ISOFileMD5  string // ISOFileMD5 is the md5sum of the OrigISOFile.
 }
 
 func newConfig() Configuration {
 	return Configuration{
-		SiteName:    "Platform",
+		SiteName:    "CSLDG",
 		SitePort:    "8080",
 		OrigISOFile: "base.iso",
+		ISOFileMD5:  "7f3c4465618e17104f0c76e5646c7caccb4161bc01a102ed04d34b1b4f1e4208",
 	}
 }
 
