@@ -23,7 +23,7 @@ func DependencyCheck() error {
 		missing = append(missing, "GNU xorriso")
 	}
 
-	// return
+	// when no missing libraries exist
 	if len(missing) == 0 {
 		return nil
 	}

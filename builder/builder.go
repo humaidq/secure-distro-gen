@@ -1,14 +1,14 @@
 package builder
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 
 	"git.sr.ht/~humaid/linux-gen/config"
+
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 // MOUNT is the mount directory for the ISO file.
@@ -28,13 +28,16 @@ type buildSession struct {
 
 // Customisation contains all the customisable parts of a Linux distribution.
 type Customisation struct {
+	Author            string
 	DistName, DistVer string
 	AddPackages       []string
 	RemovePackages    []string
 	TZ, Kbd           string
 }
 
-func Start(cust Customisation) {
+// Start customises a Linux distribution based on the given customisation.
+// Returns the location of the ISO, or an error.
+func Start(cust Customisation) (string, error) {
 	dir := os.TempDir()
 	sess := buildSession{
 		tempDir:    dir,
@@ -44,192 +47,84 @@ func Start(cust Customisation) {
 		cust:       cust,
 	}
 
-	extract(&sess)
-}
-
-func mkdir(dir string) {
-	os.Mkdir(dir, os.ModePerm)
-}
-
-func extract(sess *buildSession) {
 	var err error
 
-	mkdir(sess.mountDir)
-
-	// mount the ISO file
-	_, err = exec.Command("mount", "-o", "loop", config.Config.OrigISOFile,
-		sess.mountDir).Output()
+	err = extract(&sess)
 	if err != nil {
-		fmt.Println(err)
-		return
+		config.Logger.Error("failed to extract",
+			zap.String("author", cust.Author),
+			zap.String("tempDir", dir),
+			zap.Error(err),
+		)
 	}
 
-	// copy contents to extract folder
-	_, err = exec.Command("rsync", "--exclude=/casper/filesystem.squashfs",
-		"-a", sess.mountDir+"/", sess.extractDir).Output()
+	err = customise(&sess)
 	if err != nil {
-		fmt.Println(err)
-		return
+		config.Logger.Error("failed to customise",
+			zap.String("author", cust.Author),
+			zap.String("tempDir", dir),
+			zap.Error(err),
+		)
 	}
 
-	_, err = exec.Command("unsquashfs",
-		sess.mountDir+"/casper/filesystem.squashfs").Output()
+	err = build(&sess)
 	if err != nil {
-		fmt.Println(err)
-		return
+		config.Logger.Error("failed to build",
+			zap.String("author", cust.Author),
+			zap.String("tempDir", dir),
+			zap.Error(err),
+		)
 	}
 
-	os.Rename("squashfs-root", sess.chrootDir)
-
-	// unmount the file
-	_, err = exec.Command("umount", sess.mountDir).Output()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	os.RemoveAll(sess.mountDir)
+	return "", nil
 }
 
-func build(sess *buildSession) {
-	var err error
+// cleanup cleans up the build session in case of unexpected failure.
+// Only to be used when the build session unexpectedly fails!
+func cleanup(sess *buildSession) {
+	config.Logger.Debug("running cleanup")
+	// First, we'll umount everything we can (so we don't cause any damage)
 
-	manifest := sess.extractDir + "/casper/filesystem.manifest"
+	if isMountpoint(sess.mountDir) { // runs after umounting everyhing in mountDir
+		config.Logger.Debug("mountDir is mounted, umounting")
+		umount(sess.mountDir)
+	}
+}
 
-	_, err = exec.Command("chmod", "+w", manifest).Output()
+// umount the given directory. May return an error.
+func umount(dir string) (err error) {
+	_, err = exec.Command("umount", dir).Output()
+	return
+}
+
+// isMointpoint returns whether the directory given is a current mountpoint.
+func isMountpoint(dir string) bool {
+	_, err := exec.Command("mountpoint", dir).Output()
+	return err == nil
+}
+
+// mkdir simply makes a directory with 0o777. May return an error.
+func mkdir(dir string) error {
+	return os.Mkdir(dir, os.ModePerm)
+}
+
+// writeToFile writes given text in the file provided, replacing existing
+// contents. May return an error.
+func writeToFile(file string, text string) error {
+	f, err := os.Create(file)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return errors.Wrap(err, "create file")
 	}
+	defer f.Close()
 
-	{ // write filesystem.manifest
-		output, err := exec.Command("proot",
-			"-R", sess.chrootDir+"/",
-			"-w", "/",
-			"-b", "/proc/",
-			"-b", "/dev/",
-			"-b", "/sys/",
-			"-0",
-			"dpkg-query -W --showformat='${Package} ${Version}\n'").Output()
-
-		f, err := os.Create(sess.extractDir + "/casper/filesystem.manifest")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		defer f.Close()
-
-		_, err = io.WriteString(f, string(output))
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		f.Sync()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-	}
-
-	_, err = exec.Command("cp", manifest, manifest+"-desktop").Output()
+	_, err = io.WriteString(f, text)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return errors.Wrap(err, "write string")
 	}
-
-	_, err = exec.Command("mksquashfs", sess.chrootDir, manifest).Output()
+	err = f.Sync()
 	if err != nil {
-		fmt.Println(err)
-		return
+		return errors.Wrap(err, "sync file")
 	}
 
-	{ // write filesystem.size
-		size, err := exec.Command("du", "-sx", "--block-size=1", sess.chrootDir).Output()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		sizeStripped := strings.Split(string(size), " ")[0]
-		f, err := os.Create(sess.extractDir + "/casper/filesystem.size")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		defer f.Close()
-
-		_, err = io.WriteString(f, sizeStripped)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		f.Sync()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-	}
-
-	// Update md5sum.txt file
-	os.Remove(sess.extractDir + "/md5sum.txt")
-
-	var hashes strings.Builder
-
-	err = filepath.Walk(sess.extractDir,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if !info.IsDir() && path != sess.extractDir+"/isolinux/boot.cat" {
-				hash, err := exec.Command("md5sum", path).Output()
-				if err != nil {
-					fmt.Println(err)
-					return err
-				}
-
-				hashes.WriteString(string(hash))
-				hashes.WriteRune('\n')
-			}
-			return nil
-		})
-
-	{ // write file
-		f, err := os.Create(sess.extractDir + "/md5sum.txt")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		defer f.Close()
-
-		_, err = io.WriteString(f, hashes.String())
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		f.Sync()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-	}
-
-	xorriso := exec.Command("xorriso", "-as", "mkisofs",
-		"-r", "-V", sess.cust.DistName+" "+sess.cust.DistVer+" amd64",
-		"--protective-msdos-label",
-		"-b", "isolinux/isolinux.bin",
-		"-no-emul-boot", "-boot-load-size", "4", "-boot-info-table",
-		"--grub2-boot-info",
-		"--grub2-mbr", "/usr/lib/grub/i386-pc/boot_hybrid.img",
-		"--efi-boot", "boot/grub/efi.img", "--efi-boot-part", "--efi-boot-image",
-		"-o", sess.tempDir+"/output.iso",
-	)
-
-	xorriso.Dir = sess.extractDir
-
-	out, err := xorriso.Output()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(out)
+	return nil
 }

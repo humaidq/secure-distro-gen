@@ -28,6 +28,8 @@ var CmdStart = &cli.Command{
 
 func start(clx *cli.Context) (err error) {
 	config.LoadConfig()
+	config.SetupLogger()
+	defer config.Logger.Sync()
 	//engine := models.SetupEngine()
 	//defer engine.Close()
 

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"go.uber.org/zap"
 )
 
 var (
@@ -20,6 +21,8 @@ var (
 	Config Configuration
 	// StartTime is the time when the server started.
 	StartTime = time.Now()
+	// Logger is the zap logger.
+	Logger *zap.SugaredLogger
 )
 
 // Configuration represents the configuration file format.
@@ -46,6 +49,11 @@ func init() {
 	if err != nil {
 		log.Fatal("Cannot get working directory!", err)
 	}
+}
+
+func SetupLogger() {
+	logger, _ := zap.NewDevelopment()
+	Logger = logger.Sugar()
 }
 
 // LoadConfig loads the configuration file from disk. It will also generate one
