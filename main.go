@@ -19,6 +19,7 @@ func main() {
 	app.Version = VERSION
 	app.Commands = []*cli.Command{
 		cmd.CmdStart,
+		cmd.CmdTest,
 	}
 
 	err := app.Run(os.Args)

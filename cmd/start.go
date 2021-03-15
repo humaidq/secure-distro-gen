@@ -18,7 +18,7 @@ import (
 )
 
 // CmdStart represents a command-line command
-// which starts the bot.
+// which starts the server.
 var CmdStart = &cli.Command{
 	Name:    "run",
 	Aliases: []string{"start", "web"},

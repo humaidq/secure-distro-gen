@@ -16,9 +16,9 @@ func DependencyCheck() error {
 	if _, has := hasCommand("proot", "-V"); !has {
 		missing = append(missing, "PRoot")
 	}
-	if _, has := hasCommand("mksquashfs", "--help"); !has {
-		missing = append(missing, "Squashfs-Tools")
-	}
+	//if o, has := hasCommand("mksquashfs", "--help"); !has {
+	//	missing = append(missing, "Squashfs-Tools")
+	//}
 	if _, has := hasCommand("xorriso", "--version"); !has {
 		missing = append(missing, "GNU xorriso")
 	}

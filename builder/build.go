@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -19,7 +20,7 @@ func build(sess *buildSession) error {
 	var err error
 
 	manifest := sess.extractDir + "/casper/filesystem.manifest"
-
+	config.Logger.Debug("build: chmod")
 	_, err = exec.Command("chmod", "+w", manifest).Output()
 	if err != nil {
 		return errors.Wrap(err, "chmod filesystem manifest")
@@ -52,14 +53,18 @@ func build(sess *buildSession) error {
 		}
 	}
 
+	config.Logger.Debug("build: cp manifest")
 	_, err = exec.Command("cp", manifest, manifest+"-desktop").Output()
 	if err != nil {
 		return errors.Wrap(err, "copy filesystem manifest (desktop)")
 	}
 
-	_, err = exec.Command("mksquashfs", sess.chrootDir, manifest).Output()
+	config.Logger.Debug("build: mksquashfs")
+	o, err := execc("", "mksquashfs",
+		sess.chrootDir, sess.extractDir+"/casper/filesystem.squashfs",
+		"-comp", "lz4")
 	if err != nil {
-		return errors.Wrap(err, "mksquashfs")
+		return errors.Wrap(err, "mksquashfs "+string(o))
 	}
 
 	{ // write filesystem.size
@@ -88,6 +93,7 @@ func build(sess *buildSession) error {
 	// Update md5sum.txt file
 	os.Remove(sess.extractDir + "/md5sum.txt")
 
+	config.Logger.Debug("build: hashes")
 	var hashes strings.Builder
 
 	err = filepath.Walk(sess.extractDir,
@@ -102,8 +108,7 @@ func build(sess *buildSession) error {
 					return err
 				}
 
-				hashes.WriteString(string(hash))
-				hashes.WriteRune('\n')
+				hashes.WriteString(strings.Replace(string(hash), sess.extractDir, "", -1))
 			}
 			return nil
 		})
@@ -125,6 +130,7 @@ func build(sess *buildSession) error {
 		}
 	}
 
+	config.Logger.Debug("build: xorriso")
 	xorriso := exec.Command("xorriso", "-as", "mkisofs",
 		"-r", "-V", sess.cust.DistName+" "+sess.cust.DistVer+" amd64",
 		"--protective-msdos-label",
@@ -133,17 +139,19 @@ func build(sess *buildSession) error {
 		"--grub2-boot-info",
 		"--grub2-mbr", "/usr/lib/grub/i386-pc/boot_hybrid.img",
 		"--efi-boot", "boot/grub/efi.img", "--efi-boot-part", "--efi-boot-image",
-		"-o", sess.tempDir+"/output.iso",
+		"-o", sess.tempDir+"/output.iso", ".",
 	)
 
+	var bOut, bErr bytes.Buffer
 	xorriso.Dir = sess.extractDir
-
-	out, err := xorriso.Output()
+	xorriso.Stderr = &bErr
+	xorriso.Stdout = &bOut
+	err = xorriso.Run()
+	config.Logger.Debug("xor error: " + bErr.String())
+	config.Logger.Debug("xor out: " + bOut.String())
 	if err != nil {
 		return errors.Wrap(err, "xorriso")
 	}
-
-	config.Logger.Debug(out)
 
 	return nil
 }

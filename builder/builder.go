@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -38,7 +39,24 @@ type Customisation struct {
 // Start customises a Linux distribution based on the given customisation.
 // Returns the location of the ISO, or an error.
 func Start(cust Customisation) (string, error) {
-	dir := os.TempDir()
+	var err error
+
+	if err = DependencyCheck(); err != nil {
+		return "", err
+	}
+
+	dir, _ := os.Getwd()
+	dir = dir + "/temp"
+	mkdir(dir)
+	/*dir, err := ioutil.TempDir("", "linux-gen")
+	if err != nil {
+		config.Logger.Error("failed to create temp dir",
+			zap.String("author", cust.Author),
+			zap.String("tempDir", dir),
+			zap.Error(err),
+		)
+		return "", err
+	}*/
 	sess := buildSession{
 		tempDir:    dir,
 		mountDir:   dir + MOUNT,
@@ -47,8 +65,7 @@ func Start(cust Customisation) (string, error) {
 		cust:       cust,
 	}
 
-	var err error
-
+	config.Logger.Debug("start extract")
 	err = extract(&sess)
 	if err != nil {
 		config.Logger.Error("failed to extract",
@@ -56,8 +73,11 @@ func Start(cust Customisation) (string, error) {
 			zap.String("tempDir", dir),
 			zap.Error(err),
 		)
+		cleanup(&sess)
+		return "", err
 	}
 
+	config.Logger.Debug("start customise")
 	err = customise(&sess)
 	if err != nil {
 		config.Logger.Error("failed to customise",
@@ -65,8 +85,11 @@ func Start(cust Customisation) (string, error) {
 			zap.String("tempDir", dir),
 			zap.Error(err),
 		)
+		cleanup(&sess)
+		return "", err
 	}
 
+	config.Logger.Debug("start build")
 	err = build(&sess)
 	if err != nil {
 		config.Logger.Error("failed to build",
@@ -74,6 +97,8 @@ func Start(cust Customisation) (string, error) {
 			zap.String("tempDir", dir),
 			zap.Error(err),
 		)
+		cleanup(&sess)
+		return "", err
 	}
 
 	return "", nil
@@ -89,6 +114,10 @@ func cleanup(sess *buildSession) {
 		config.Logger.Debug("mountDir is mounted, umounting")
 		umount(sess.mountDir)
 	}
+
+	config.Logger.Debug("Will remove all when press enter")
+	fmt.Scanln()
+	os.RemoveAll(sess.tempDir)
 }
 
 // umount the given directory. May return an error.
