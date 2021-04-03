@@ -36,6 +36,11 @@ func build(sess *buildSession) error {
 			"-0",
 			"dpkg-query -W --showformat='${Package} ${Version}\n'").Output()
 
+		if err != nil {
+			fmt.Println(err)
+			return errors.Wrap(err, "create dpkg query")
+		}
+
 		f, err := os.Create(sess.extractDir + "/casper/filesystem.manifest")
 		if err != nil {
 			fmt.Println(err)
@@ -58,6 +63,8 @@ func build(sess *buildSession) error {
 	if err != nil {
 		return errors.Wrap(err, "copy filesystem manifest (desktop)")
 	}
+	// TODO remove from the manifest (desktop) the calamares and casper
+	// packages
 
 	config.Logger.Debug("build: mksquashfs")
 	o, err := execc("", "mksquashfs",

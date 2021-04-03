@@ -208,6 +208,10 @@ label {
   display: inline-block;
 }
 
+table {
+  width: 100%;
+}
+
 .item-title {
   font-weight: bold;
 }

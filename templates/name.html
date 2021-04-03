@@ -1,30 +1,66 @@
 {{ template "partials/header" .}}
-<h2>Name your OS</h2>
-<p>Pick a name for your personalised operating system!</p>
-
+{{ template "partials/configbar" . }}
+<h2>Distribution Configuration</h2>
 <form method="post">
+  <h3>Name</h3>
+  <p>This is where you can name your distribution and give it a version.</p>
   <div class="form-group">
     <label for="name">Name:</label>
-    <input type="text" id="name" name="name" required="1">
+    <input type="text" id="name" name="name" required="1" value="{{.sess.Name}}">
   </div>
   <div class="form-group">
     <label for="ver">Version:</label>
-    <input type="text" id="ver" name="ver" required="1" value="0.1">
+    <input type="text" id="ver" name="ver" required="1" value="{{.sess.Version}}">
   </div>
-  <h2>Further Configuration</h2>
+  <h3>Localisation</h3>
+  <p>Below you can pre-select the localisation, such as the keyboard layout and
+  default timezone. This can be changed later during installation.</p>
   <div class="form-group">
-    <label for="kbd">Keyboard layout:</label>
-    <select id="kbd" disabled>
-      <option value="us">us</option>
-    </select> 
+    <label for="ver">Keyboard layout:</label>
+    <input type="text" id="kbd" name="kbd" required="1" value="{{.sess.Kbd}}">
   </div>
   <div class="form-group">
-    <label for="tz">Default timezone:</label>
-    <select id="kbd" disabled>
-      <option value="us">Asia/Dubai</option>
-    </select> 
+    <label for="ver">Default timezone:</label>
+    <input type="text" id="tz" name="tz" required="1" value="{{.sess.Tz}}">
   </div>
-
-  <button class="btn" type="submit">Done</button>
+  <h3>Packages</h3>
+  <p>You may add or remove the pre-selected system packages.</p>
+  <p><a href="#" class="btn">Add/Remove a package</a></p>
+  <h4>List of changes to system packages</h4>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Version</th>
+      <th>Action</th>
+      <th></th>
+    </tr>
+    <tr>
+      <td>libreoffice</td>
+      <td>7.1.0.3_1</td>
+      <td>Install</td>
+      <td><a href="#" class="btn">x</a></td>
+    </tr>
+  </table>
+  <button class="btn" type="submit">Save</button>
 </form>
+
+<h2>Build</h2>
+<p>Once you have completed customising your system above, you may build your
+system.</p>
+<p><b>Make sure you have saved changes if you made any above!</b></p>
+<h3>Previous builds</h3>
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Build Date</th>
+      <th>Size</th>
+      <th></th>
+    </tr>
+    <tr>
+      <td>sifrOS v0.1.0</td>
+      <td>03 Apr 2021 12:13pm GMT</td>
+      <td>2.2 GB</td>
+      <td><a href="#" class="btn">Download</a></td>
+    </tr>
+  </table>
 {{ template "partials/footer" .}}

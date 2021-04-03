@@ -20,14 +20,40 @@ func DownloadHandler(ctx *macaron.Context, sess session.Store) {
 	ctx.HTML(200, "download")
 }
 
-// FinalHandler response for the final page.
-func FinalHandler(ctx *macaron.Context, sess session.Store) {
+type packageAction int
+
+const (
+	InstallPackage = iota
+	PurgePackage
+)
+
+type sessionData struct {
+	Name, Version, Kbd, Tz string
+	Packages               map[string]packageAction
+}
+
+// ConfigHandler response for the final page.
+func ConfigHandler(ctx *macaron.Context, sess session.Store) {
 	if ctx.Req.Method == "POST" {
-		sess.Set("os-name", ctx.QueryTrim("name"))
-		sess.Set("os-ver", ctx.QueryTrim("ver"))
-		ctx.Redirect("/download")
+		var sessData sessionData
+		if s := sess.Get("sess"); s != nil {
+			sessData = s.(sessionData)
+		}
+		sessData.Name = ctx.QueryTrim("name")
+		sessData.Version = ctx.QueryTrim("ver")
+		sessData.Kbd = ctx.QueryTrim("kbd")
+		sessData.Tz = ctx.QueryTrim("tz")
+
+		sess.Set("sess", sessData)
+
+		ctx.Redirect("/config")
 		return
 	}
+	if s := sess.Get("sess"); s != nil {
+		fmt.Println("yey sess")
+		ctx.Data["sess"] = s.(sessionData)
+	}
+
 	ctx.HTML(200, "name")
 }
 
@@ -77,7 +103,7 @@ func WizardHandler(ctx *macaron.Context, sess session.Store) {
 	}
 
 	if uint32(len(wizard.Questions)) == q {
-		ctx.Redirect("/final")
+		ctx.Redirect("/config")
 	}
 	fmt.Println("Displaying option", q)
 

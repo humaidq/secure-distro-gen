@@ -47,6 +47,9 @@ func Start(cust Customisation) (string, error) {
 
 	dir, _ := os.Getwd()
 	dir = dir + "/temp"
+	if _, err := os.Stat(dir); err == nil {
+		os.RemoveAll(dir)
+	}
 	mkdir(dir)
 	/*dir, err := ioutil.TempDir("", "linux-gen")
 	if err != nil {
@@ -156,4 +159,17 @@ func writeToFile(file string, text string) error {
 	}
 
 	return nil
+}
+
+func proot(sess *buildSession, comm string) (output string, err error) {
+	output, err = execc(sess.tempDir, "proot",
+		"-R", sess.chrootDir+"/",
+		"-w", "/",
+		"-b", "/proc/",
+		"-b", "/dev/",
+		"-b", "/sys/",
+		"-0",
+		comm)
+
+	return
 }
