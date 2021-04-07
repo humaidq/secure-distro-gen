@@ -15,14 +15,19 @@ func execc(wd string, cmd string, args ...string) (string, error) {
 	c := exec.Command(cmd, args...)
 	c.Stderr = &bErr
 	c.Stdout = &bOut
+	c.Stderr = os.Stdout
+	c.Stdout = os.Stdout
+	// fix bug with "terminated with signal 11"
+	// https://github.com/proot-me/proot/issues/106
+	c.Env = append(c.Env, "PROOT_NO_SECCOMP=1")
 	if wd != "" {
 		c.Dir = wd
 	}
 	err := c.Run()
 	if err != nil {
-		return bErr.String(), err
+		return bOut.String() + ";" + bErr.String(), err
 	}
-	return bOut.String(), nil
+	return bOut.String() + ";" + bErr.String(), nil
 }
 
 // extract mounts the original ISO file and copies the contents out of it. It

@@ -45,12 +45,6 @@ func Start(cust Customisation) (string, error) {
 		return "", err
 	}
 
-	dir, _ := os.Getwd()
-	dir = dir + "/temp"
-	if _, err := os.Stat(dir); err == nil {
-		os.RemoveAll(dir)
-	}
-	mkdir(dir)
 	/*dir, err := ioutil.TempDir("", "linux-gen")
 	if err != nil {
 		config.Logger.Error("failed to create temp dir",
@@ -60,6 +54,8 @@ func Start(cust Customisation) (string, error) {
 		)
 		return "", err
 	}*/
+	dir, _ := os.Getwd()
+	dir = dir + "/temp"
 	sess := buildSession{
 		tempDir:    dir,
 		mountDir:   dir + MOUNT,
@@ -67,6 +63,11 @@ func Start(cust Customisation) (string, error) {
 		chrootDir:  dir + CHROOT,
 		cust:       cust,
 	}
+
+	if _, err := os.Stat(dir); err == nil {
+		cleanup(&sess)
+	}
+	mkdir(dir)
 
 	config.Logger.Debug("start extract")
 	err = extract(&sess)
@@ -112,6 +113,10 @@ func Start(cust Customisation) (string, error) {
 func cleanup(sess *buildSession) {
 	config.Logger.Debug("running cleanup")
 	// First, we'll umount everything we can (so we don't cause any damage)
+	if isMountpoint(sess.chrootDir + "/dev") { // runs after umounting everyhing in mountDir
+		config.Logger.Debug("/dev is mounted, umounting")
+		umount(sess.chrootDir + "/dev")
+	}
 
 	if isMountpoint(sess.mountDir) { // runs after umounting everyhing in mountDir
 		config.Logger.Debug("mountDir is mounted, umounting")
@@ -120,7 +125,7 @@ func cleanup(sess *buildSession) {
 
 	config.Logger.Debug("Will remove all when press enter")
 	fmt.Scanln()
-	os.RemoveAll(sess.tempDir)
+	//os.RemoveAll(sess.tempDir)
 }
 
 // umount the given directory. May return an error.
@@ -161,15 +166,14 @@ func writeToFile(file string, text string) error {
 	return nil
 }
 
-func proot(sess *buildSession, comm string) (output string, err error) {
+func proot(sess *buildSession, comm string, args string) (output string, err error) {
 	output, err = execc(sess.tempDir, "proot",
 		"-R", sess.chrootDir+"/",
 		"-w", "/",
 		"-b", "/proc/",
 		"-b", "/dev/",
 		"-b", "/sys/",
-		"-0",
-		comm)
-
+		"-0", comm, args)
+	fmt.Println("proot output:", output)
 	return
 }

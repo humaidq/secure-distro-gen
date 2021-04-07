@@ -27,15 +27,8 @@ func build(sess *buildSession) error {
 	}
 
 	{ // write filesystem.manifest
-		output, err := exec.Command("proot",
-			"-R", sess.chrootDir+"/",
-			"-w", "/",
-			"-b", "/proc/",
-			"-b", "/dev/",
-			"-b", "/sys/",
-			"-0",
-			"dpkg-query -W --showformat='${Package} ${Version}\n'").Output()
-
+		output, err := execc(sess.tempDir, "chroot", "dpkg-query",
+			"-W --showformat='${Package} ${Version}\n'")
 		if err != nil {
 			fmt.Println(err)
 			return errors.Wrap(err, "create dpkg query")

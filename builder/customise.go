@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -60,24 +59,64 @@ UBUNTU_CODENAME=focal`)
 		"s/lubuntu\\.me/humaidq\\.ae/g")
 
 	// Install packages
-
-	output, err := proot(sess, "apt update")
-	if err != nil {
-		fmt.Println(output)
-		return errors.Wrap(err, "apt update")
+	if err := buildCustomiseScript(sess); err != nil {
+		return errors.Wrap(err, "build customise script")
 	}
 
-	output, err = proot(sess, "apt upgrade")
+	// fix dns resolution issue
+	os.Remove(sess.chrootDir + "/etc/resolv.conf")
+	os.Remove(sess.chrootDir + "/var/lib/dpkg/statoverride")
+	writeToFile(sess.chrootDir+"/etc/resolv.conf", "nameserver 8.8.8.8")
+
+	// mount /dev
+	_, err := execc(sess.tempDir, "mount", "--bind", "/dev/", sess.chrootDir+"/dev")
 	if err != nil {
-		fmt.Println(output)
-		return errors.Wrap(err, "apt upgrade")
+		return errors.Wrap(err, "mount /dev for chroot")
 	}
 
-	output, err = proot(sess, "apt install "+strings.Join(sess.cust.AddPackages, " "))
-
-	if err != nil {
-		fmt.Println(output)
-		return errors.Wrap(err, "apt upgrade")
+	if _, err := execc(sess.tempDir, "chroot", sess.chrootDir, "/bin/bash", "/root/cust.sh"); err != nil {
+		return errors.Wrap(err, "chroot customise script")
 	}
+
+	umount(sess.chrootDir + "/dev")
+
+	return nil
+}
+
+func buildCustomiseScript(sess *buildSession) error {
+	var sh strings.Builder
+	sh.WriteString(`#!/bin/bash
+export HOME=/root
+export LC_ALL=C
+
+mount -t proc none /proc
+mount -t sysfs none /sys
+mount -t devpts none /dev/pts
+
+apt update
+#apt upgrade -y --allow-downgrades
+
+`)
+
+	for _, pkg := range sess.cust.AddPackages {
+		sh.WriteString("apt install -y " + pkg + "\n")
+	}
+
+	for _, pkg := range sess.cust.RemovePackages {
+		sh.WriteString("apt purge -y " + pkg + "\n")
+	}
+
+	sh.WriteString("apt autoremove --purge -y\n")
+
+	sh.WriteString(`umount /proc
+umount /sys
+umount /dev/pts
+`)
+
+	err := writeToFile(sess.chrootDir+"/root/cust.sh", sh.String())
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
