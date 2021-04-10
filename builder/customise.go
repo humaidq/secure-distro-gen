@@ -85,6 +85,8 @@ UBUNTU_CODENAME=focal`)
 
 func buildCustomiseScript(sess *buildSession) error {
 	var sh strings.Builder
+	// Important note: We need to remember to add a new line after every write!
+
 	sh.WriteString(`#!/bin/bash
 export HOME=/root
 export LC_ALL=C

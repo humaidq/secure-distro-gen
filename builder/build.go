@@ -27,8 +27,8 @@ func build(sess *buildSession) error {
 	}
 
 	{ // write filesystem.manifest
-		output, err := execc(sess.tempDir, "chroot", "dpkg-query",
-			"-W --showformat='${Package} ${Version}\n'")
+		output, err := execc(sess.tempDir, "chroot", sess.chrootDir, "dpkg-query",
+			"-W", "--showformat='${Package} ${Version}\\n'")
 		if err != nil {
 			fmt.Println(err)
 			return errors.Wrap(err, "create dpkg query")
