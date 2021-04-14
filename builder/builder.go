@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -39,6 +40,7 @@ type Customisation struct {
 
 type SystemPackage struct {
 	Name, Version string
+	Section       string
 	Installed     bool
 }
 
@@ -99,7 +101,6 @@ func GetMetadata() (SystemMetadata, error) {
 
 		pkgName := strings.Split(l, "/")[0]
 		installed[pkgName] = true
-
 	}
 
 	output, err = execc(sess.tempDir, "chroot", sess.chrootDir, "apt",
@@ -127,8 +128,9 @@ func GetMetadata() (SystemMetadata, error) {
 		// clean up ver
 		pkgVer = strings.Split(pkgVer, "-")[0]
 		pkgVer = strings.Split(pkgVer, "~")[0]
+		pkgVer = strings.Split(pkgVer, "+")[0]
 
-		fmt.Println(pkgName, pkgVer)
+		//fmt.Println(pkgName, pkgVer)
 
 		sys.Packages = append(sys.Packages, SystemPackage{
 			Name:      pkgName,
@@ -137,12 +139,36 @@ func GetMetadata() (SystemMetadata, error) {
 		})
 	}
 
+	fmt.Printf("We have %d packages\n", len(sys.Packages))
+	fmt.Println("Getting info for each package")
+	for i, p := range sys.Packages {
+		output, err = execc(sess.tempDir, "chroot", sess.chrootDir, "apt-cache",
+			"show", p.Name)
+
+		if err == nil {
+			part := strings.Split(output, "Section: ")[1]
+			part = strings.Split(part, "\n")[0]
+
+			sys.Packages[i].Section = part
+			//fmt.Println("part", part)
+		} else {
+			fmt.Println("Cannot get info for package", p.Name)
+		}
+
+		if i%50 == 0 {
+			fmt.Printf("%d/%d complete\n", i, len(sys.Packages))
+		}
+	}
+
 	cleanup(&sess)
 
 	b, err := json.Marshal(sys)
 	if err != nil {
 		panic(err)
 	}
+
+	writeToFile("./metadata.json", string(b))
+	fmt.Println("Written to metadata file")
 
 	return sys, nil
 }

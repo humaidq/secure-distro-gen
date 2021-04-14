@@ -1,0 +1,28 @@
+{{ template "partials/header" .}}
+{{ template "partials/configbar" . }}
+<h2>Add/Remove Packages</h2>
+
+{{if .Cat}}
+<p>Below you can add or remove a package from the system.</p>
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Version</th>
+    <th>Action</th>
+  </tr>
+  {{ range .meta.Packages }}
+  <tr>
+    <td>{{.Name}}</td>
+    <td>{{.Version}}</td>
+    <td><a href="" class="btn">{{if .Installed
+        }}Uninstall{{else}}Install{{end}}</a></td>
+  </tr>
+  {{end}}
+</table>
+{{else}}
+{{range .Categories }}
+<a href="">{{. }}</a>
+{{end}}
+{{end}}
+{{ template "partials/footer" .}}
+

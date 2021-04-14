@@ -1,0 +1,28 @@
+{{ template "partials/header" .}}
+{{ template "partials/configbar" . }}
+<h2>Build</h2>
+<p>Once you have completed customising your system above, you may build your
+system.</p>
+<h3></h3>
+<p>Ready to build {{.sess.Name}} {{.sess.Version}}. Visit configuration page to
+adjust version.</p>
+
+<p><a href="/" class="btn">Build ISO</a></p>
+
+<h3>Previous builds</h3>
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Build Date</th>
+    <th>Size</th>
+    <th></th>
+  </tr>
+  <tr>
+    <td>sifrOS v0.1.0</td>
+    <td>03 Apr 2021 12:13pm GMT</td>
+    <td>2.2 GB</td>
+    <td><a href="#" class="btn">Download</a></td>
+  </tr>
+</table>
+
+{{ template "partials/footer" .}}

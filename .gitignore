@@ -1,4 +1,5 @@
 *.iso
 *.img
+metadata.json
 temp/
 linux-gen

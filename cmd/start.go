@@ -59,6 +59,11 @@ func start(clx *cli.Context) (err error) {
 	m.Post("/wizard", routes.WizardHandler)
 	m.Get("/config", routes.ConfigHandler)
 	m.Post("/config", routes.ConfigHandler)
+
+	m.Get("/pkgs", routes.PackagesHandler)
+	m.Get("/pkgs/sel", routes.SelectPackageHandler)
+	m.Get("/build", routes.BuildHandler)
+
 	m.Get("/download", routes.DownloadHandler)
 
 	log.Printf("Starting web server on port %s\n", config.Config.SitePort)

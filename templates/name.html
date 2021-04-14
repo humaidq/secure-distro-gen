@@ -23,44 +23,6 @@
     <label for="ver">Default timezone:</label>
     <input type="text" id="tz" name="tz" required="1" value="{{.sess.Tz}}">
   </div>
-  <h3>Packages</h3>
-  <p>You may add or remove the pre-selected system packages.</p>
-  <p><a href="#" class="btn">Add/Remove a package</a></p>
-  <h4>List of changes to system packages</h4>
-  <table>
-    <tr>
-      <th>Name</th>
-      <th>Version</th>
-      <th>Action</th>
-      <th></th>
-    </tr>
-    <tr>
-      <td>libreoffice</td>
-      <td>7.1.0.3_1</td>
-      <td>Install</td>
-      <td><a href="#" class="btn">x</a></td>
-    </tr>
-  </table>
   <button class="btn" type="submit">Save</button>
 </form>
-
-<h2>Build</h2>
-<p>Once you have completed customising your system above, you may build your
-system.</p>
-<p><b>Make sure you have saved changes if you made any above!</b></p>
-<h3>Previous builds</h3>
-  <table>
-    <tr>
-      <th>Name</th>
-      <th>Build Date</th>
-      <th>Size</th>
-      <th></th>
-    </tr>
-    <tr>
-      <td>sifrOS v0.1.0</td>
-      <td>03 Apr 2021 12:13pm GMT</td>
-      <td>2.2 GB</td>
-      <td><a href="#" class="btn">Download</a></td>
-    </tr>
-  </table>
 {{ template "partials/footer" .}}
