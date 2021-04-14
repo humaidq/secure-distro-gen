@@ -15,11 +15,12 @@ var VERSION = "0.1.0"
 func main() {
 	app := cli.NewApp()
 	app.Name = "linux-gen"
-	app.Usage = "Custom Secure Linux Distribution Generator - Web App Server"
+	app.Usage = "Custom Secure Linux Distribution Generator"
 	app.Version = VERSION
 	app.Commands = []*cli.Command{
 		cmd.CmdStart,
 		cmd.CmdTest,
+		cmd.CmdMetadata,
 	}
 
 	err := app.Run(os.Args)

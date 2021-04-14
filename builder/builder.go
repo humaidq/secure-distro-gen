@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"git.sr.ht/~humaid/linux-gen/config"
 
@@ -34,6 +35,116 @@ type Customisation struct {
 	AddPackages       []string
 	RemovePackages    []string
 	TZ, Kbd           string
+}
+
+type SystemPackage struct {
+	Name, Version string
+	Installed     bool
+}
+
+type SystemMetadata struct {
+	Packages  []SystemPackage
+	Timezones []string
+}
+
+func GetMetadata() (SystemMetadata, error) {
+	var err error
+
+	if err = DependencyCheck(); err != nil {
+		return SystemMetadata{}, err
+	}
+
+	dir, _ := os.Getwd()
+	dir = dir + "/temp"
+	sess := buildSession{
+		tempDir:    dir,
+		mountDir:   dir + MOUNT,
+		extractDir: dir + EXTRACT,
+		chrootDir:  dir + CHROOT,
+	}
+
+	if _, err := os.Stat(dir); err == nil {
+		cleanup(&sess)
+	}
+	mkdir(dir)
+
+	config.Logger.Debug("start extract")
+	err = extract(&sess)
+	if err != nil {
+		config.Logger.Error("failed to extract",
+			zap.String("tempDir", dir),
+			zap.Error(err),
+		)
+		cleanup(&sess)
+		return SystemMetadata{}, err
+	}
+
+	installed := make(map[string]bool)
+
+	output, err := execc(sess.tempDir, "chroot", sess.chrootDir, "apt",
+		"list", "--installed")
+	if err != nil {
+		fmt.Println(err)
+		return SystemMetadata{}, errors.Wrap(err, "apt list")
+	}
+	for i, l := range strings.Split(output, "\n") {
+		if i == 0 {
+			continue // skip the "Listing..." line
+		}
+
+		sp := strings.Split(l, " ")
+		if len(sp) < 2 {
+			continue
+		}
+
+		pkgName := strings.Split(l, "/")[0]
+		installed[pkgName] = true
+
+	}
+
+	output, err = execc(sess.tempDir, "chroot", sess.chrootDir, "apt",
+		"list")
+	if err != nil {
+		fmt.Println(err)
+		return SystemMetadata{}, errors.Wrap(err, "apt list")
+	}
+
+	sys := SystemMetadata{}
+
+	for i, l := range strings.Split(output, "\n") {
+		if i == 0 {
+			continue // skip the "Listing..." line
+		}
+		sp := strings.Split(l, " ")
+		if len(sp) < 2 {
+			fmt.Println("LINE SMOL", l)
+			continue
+		}
+
+		pkgName := strings.Split(l, "/")[0]
+		pkgVer := sp[1]
+
+		// clean up ver
+		pkgVer = strings.Split(pkgVer, "-")[0]
+		pkgVer = strings.Split(pkgVer, "~")[0]
+
+		fmt.Println(pkgName, pkgVer)
+
+		sys.Packages = append(sys.Packages, SystemPackage{
+			Name:      pkgName,
+			Version:   pkgVer,
+			Installed: installed[pkgName],
+		})
+	}
+
+	cleanup(&sess)
+
+	b, err := json.Marshal(sys)
+	if err != nil {
+		panic(err)
+	}
+
+	return sys, nil
 }
 
 // Start customises a Linux distribution based on the given customisation.
@@ -115,17 +226,23 @@ func cleanup(sess *buildSession) {
 	// First, we'll umount everything we can (so we don't cause any damage)
 	if isMountpoint(sess.chrootDir + "/dev") { // runs after umounting everyhing in mountDir
 		config.Logger.Debug("/dev is mounted, umounting")
-		umount(sess.chrootDir + "/dev")
+		e := umount(sess.chrootDir + "/dev")
+		if e != nil {
+			panic("Cannot umount /dev!")
+		}
 	}
 
 	if isMountpoint(sess.mountDir) { // runs after umounting everyhing in mountDir
 		config.Logger.Debug("mountDir is mounted, umounting")
-		umount(sess.mountDir)
+		e := umount(sess.mountDir)
+		if e != nil {
+			panic("Cannot umount /dev!")
+		}
 	}
 
 	config.Logger.Debug("Will remove all when press enter")
 	fmt.Scanln()
-	//os.RemoveAll(sess.tempDir)
+	os.RemoveAll(sess.tempDir)
 }
 
 // umount the given directory. May return an error.
