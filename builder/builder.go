@@ -150,7 +150,6 @@ func GetMetadata() (SystemMetadata, error) {
 			part = strings.Split(part, "\n")[0]
 
 			sys.Packages[i].Section = part
-			//fmt.Println("part", part)
 		} else {
 			fmt.Println("Cannot get info for package", p.Name)
 		}

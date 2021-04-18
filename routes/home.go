@@ -4,7 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"regexp"
+	"sort"
+	"strings"
+	"time"
 
+	"github.com/agext/levenshtein"
 	"github.com/go-macaron/session"
 	macaron "gopkg.in/macaron.v1"
 
@@ -39,6 +44,7 @@ type sessionData struct {
 	Name, Version, Kbd, Tz string
 	Packages               []sysPackage
 	Processed              bool
+	Script                 string
 	Stringency             int
 }
 
@@ -51,6 +57,157 @@ var pkgMap = make(map[string]builder.SystemPackage)
 var cmdlinePkgs = []string{"tmux", "imagemagick", "curl", "units", "inxi",
 	"jq", "mlocate", "pv", "ranger", "sxiv", "feh", "screen", "nmap", "lm-sensors",
 	"ffmpeg", "zathura", "zathura-pdf-poppler"}
+
+type sectionBundle struct {
+	SectionName string
+	FAIcon      string
+	Sections    []string
+}
+
+type kbdInfo struct {
+	Code, Name string
+}
+
+var kbds = []kbdInfo{
+	{Code: "us", Name: "USA"},
+	{Code: "ad", Name: "Andorra"},
+	{Code: "af", Name: "Afghanistan"},
+	{Code: "ara", Name: "Arabic"},
+	{Code: "al", Name: "Albania"},
+	{Code: "am", Name: "Armenia"},
+	{Code: "az", Name: "Azerbaijan"},
+	{Code: "by", Name: "Belarus"},
+	{Code: "be", Name: "Belgium"},
+	{Code: "bd", Name: "Bangladesh"},
+	{Code: "in", Name: "India"},
+	{Code: "ba", Name: "Bosnia and Herzegovina"},
+	{Code: "br", Name: "Brazil"},
+	{Code: "bg", Name: "Bulgaria"},
+	{Code: "ma", Name: "Morocco"},
+	{Code: "mm", Name: "Myanmar"},
+	{Code: "ca", Name: "Canada"},
+	{Code: "cd", Name: "Congo, Democratic Republic of the"},
+	{Code: "cn", Name: "China"},
+	{Code: "hr", Name: "Croatia"},
+	{Code: "cz", Name: "Czechia"},
+	{Code: "dk", Name: "Denmark"},
+	{Code: "nl", Name: "Netherlands"},
+	{Code: "bt", Name: "Bhutan"},
+	{Code: "ee", Name: "Estonia"},
+	{Code: "ir", Name: "Iran"},
+	{Code: "iq", Name: "Iraq"},
+	{Code: "fo", Name: "Faroe Islands"},
+	{Code: "fi", Name: "Finland"},
+	{Code: "fr", Name: "France"},
+	{Code: "gh", Name: "Ghana"},
+	{Code: "gn", Name: "Guinea"},
+	{Code: "ge", Name: "Georgia"},
+	{Code: "de", Name: "Germany"},
+	{Code: "gr", Name: "Greece"},
+	{Code: "hu", Name: "Hungary"},
+	{Code: "is", Name: "Iceland"},
+	{Code: "il", Name: "Israel"},
+	{Code: "it", Name: "Italy"},
+	{Code: "jp", Name: "Japan"},
+	{Code: "kg", Name: "Kyrgyzstan"},
+	{Code: "kh", Name: "Cambodia"},
+	{Code: "kz", Name: "Kazakhstan"},
+	{Code: "la", Name: "Laos"},
+	{Code: "latam", Name: "Latin American"},
+	{Code: "lt", Name: "Lithuania"},
+	{Code: "lv", Name: "Latvia"},
+	{Code: "mao", Name: "Maori"},
+	{Code: "me", Name: "Montenegro"},
+	{Code: "mk", Name: "Macedonia"},
+	{Code: "mt", Name: "Malta"},
+	{Code: "mn", Name: "Mongolia"},
+	{Code: "no", Name: "Norway"},
+	{Code: "pl", Name: "Poland"},
+	{Code: "pt", Name: "Portugal"},
+	{Code: "ro", Name: "Romania"},
+	{Code: "ru", Name: "Russia"},
+	{Code: "rs", Name: "Serbia"},
+	{Code: "si", Name: "Slovenia"},
+	{Code: "sk", Name: "Slovakia"},
+	{Code: "es", Name: "Spain"},
+	{Code: "se", Name: "Sweden"},
+	{Code: "ch", Name: "Switzerland"},
+	{Code: "sy", Name: "Syria"},
+	{Code: "tj", Name: "Tajikistan"},
+	{Code: "lk", Name: "Sri Lanka"},
+	{Code: "th", Name: "Thailand"},
+	{Code: "tr", Name: "Turkey"},
+	{Code: "tw", Name: "Taiwan"},
+	{Code: "ua", Name: "Ukraine"},
+	{Code: "gb", Name: "United Kingdom"},
+	{Code: "uz", Name: "Uzbekistan"},
+	{Code: "vn", Name: "Vietnam"},
+	{Code: "kr", Name: "Korea, Republic of"},
+	{Code: "jp", Name: "Japan (PC-98xx Series)"},
+	{Code: "ie", Name: "Ireland"},
+	{Code: "pk", Name: "Pakistan"},
+	{Code: "mv", Name: "Maldives"},
+	{Code: "za", Name: "South Africa"},
+	{Code: "epo", Name: "Esperanto"},
+	{Code: "np", Name: "Nepal"},
+	{Code: "ng", Name: "Nigeria"},
+	{Code: "et", Name: "Ethiopia"},
+	{Code: "sn", Name: "Senegal"},
+	{Code: "brai", Name: "Braille"},
+	{Code: "tm", Name: "Turkmenistan"},
+	{Code: "ml", Name: "Mali"},
+	{Code: "tz", Name: "Tanzania"},
+}
+
+var sections = []sectionBundle{
+	{
+		SectionName: "Internet",
+		FAIcon:      "fab fa-firefox-browser",
+		Sections:    []string{"mail", "web"},
+	},
+	{
+		SectionName: "Games",
+		FAIcon:      "fas fa-puzzle-piece",
+		Sections:    []string{"games"},
+	},
+	{
+		SectionName: "Development",
+		FAIcon:      "fas fa-code",
+		Sections: []string{"python", "doc", "devel", "haskell", "database",
+			"php", "java", "vcs", "javascript", "shells", "ocaml", "ruby",
+			"lisp", "perl", "rust"},
+	},
+	{
+		SectionName: "Education",
+		FAIcon:      "fas fa-atom",
+		Sections:    []string{"science", "math", "education"},
+	},
+	{
+		SectionName: "Multimedia",
+		FAIcon:      "fas fa-photo-video",
+		Sections:    []string{"sound", "graphics", "video"},
+	},
+	{
+		SectionName: "Miscellaneous",
+		FAIcon:      "fas fa-boxes",
+		Sections:    []string{"misc", "hamradio"},
+	},
+	{
+		SectionName: "System Applications",
+		FAIcon:      "fas fa-cog",
+		Sections:    []string{"x11", "gnome", "kde", "xfce"},
+	},
+	{
+		SectionName: "System Tools",
+		FAIcon:      "fas fa-tools",
+		Sections:    []string{"admin", "kernel", "net", "utils", "otherosfs"},
+	},
+	{
+		SectionName: "System Libraries",
+		FAIcon:      "fas fa-book",
+		Sections:    []string{"libdevel", "libs", "oldlibs", "devel"},
+	},
+}
 
 func init() {
 	if data, err := ioutil.ReadFile("./metadata.json"); err == nil {
@@ -85,6 +242,39 @@ func init() {
 		"licensor", "jq", "pandoc", "plantuml", "shellcheck", "youtube-dl"}
 
 	useCasePkgs["other"] = []string{}
+
+	// Get timezones
+	now := time.Now()
+	if tzFile, err := ioutil.ReadFile("tz"); err == nil {
+		for _, line := range strings.Split(string(tzFile), "\n") {
+			if loc, err := time.LoadLocation(line); err == nil && len(line) != 0 {
+				then := now.In(loc)
+				short, off := then.Zone()
+				tzs = append(tzs, tzInfo{
+					DBName:    line,
+					ShortName: short,
+					Offset:    off,
+				})
+			}
+		}
+	}
+	sort.Sort(ByZone(tzs))
+}
+
+var tzs []tzInfo
+
+type tzInfo struct {
+	DBName    string
+	ShortName string
+	Offset    int
+}
+
+type ByZone []tzInfo
+
+func (a ByZone) Len() int      { return len(a) }
+func (a ByZone) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByZone) Less(i, j int) bool {
+	return a[i].Offset < a[j].Offset
 }
 
 func getPackages(list []string) (s []sysPackage) {
@@ -99,6 +289,21 @@ func getPackages(list []string) (s []sysPackage) {
 		}
 	}
 
+	return
+}
+
+var filter = regexp.MustCompile(`^(multiverse/|universe/|restricted/)`)
+
+func filterPackages(section sectionBundle) (pkgs []builder.SystemPackage) {
+	for i, p := range meta.Packages {
+		sect := filter.ReplaceAllString(p.Section, "")
+		for _, bun := range section.Sections {
+			if sect == bun {
+				pkgs = append(pkgs, meta.Packages[i])
+				break
+			}
+		}
+	}
 	return
 }
 
@@ -129,6 +334,21 @@ func PackagesHandler(ctx *macaron.Context, sess session.Store) {
 	if s := sess.Get("sess"); s != nil {
 		sessData = s.(sessionData)
 	}
+
+	if len(ctx.QueryTrim("rm")) > 0 {
+		rm := ctx.QueryTrim("rm")
+		for i, p := range sessData.Packages {
+			if p.Name == rm {
+				sessData.Packages = append(sessData.Packages[:i], sessData.Packages[i+1:]...)
+				break
+			}
+		}
+
+		sess.Set("sess", sessData)
+		ctx.Redirect("/pkgs")
+		return
+	}
+
 	ctx.Data["sess"] = sessData
 
 	ctx.HTML(200, "packages")
@@ -161,7 +381,79 @@ func SelectPackageHandler(ctx *macaron.Context, sess session.Store) {
 	ctx.Data["sess"] = sessData
 	ctx.Data["meta"] = meta
 
-	ctx.Data["Categories"] = getCategories()
+	if len(ctx.QueryTrim("do")) > 0 {
+		pkg := ctx.QueryTrim("do")
+
+		// Check if exists in list
+		for _, p := range sessData.Packages {
+			if p.Name == pkg {
+				ctx.Redirect("/pkgs")
+				return
+			}
+		}
+
+		for _, p := range meta.Packages {
+			if p.Name == pkg {
+				// Install if not installed, purge otherwise
+				var action packageAction
+				if p.Installed {
+					action = PurgePackage
+				} else {
+					action = InstallPackage
+				}
+				sessData.Packages = append(sessData.Packages, sysPackage{
+					Name:    p.Name,
+					Version: p.Version,
+					Action:  action,
+				})
+
+				break
+			}
+		}
+
+		sess.Set("sess", sessData)
+
+		ctx.Redirect("/pkgs")
+		return
+	}
+
+	sec := ctx.QueryTrim("sec")
+	if len(sec) > 0 {
+		if sec == "all" {
+			ctx.Data["Packages"] = meta.Packages
+			ctx.Data["Cat"] = sectionBundle{
+				SectionName: "View All Packages",
+				FAIcon:      "fas fa-list-ul",
+			}
+		} else {
+			for _, s := range sections {
+				if sec == s.SectionName {
+					pkgs := filterPackages(s)
+					ctx.Data["Packages"] = pkgs
+					ctx.Data["Cat"] = s
+					break
+				}
+			}
+		}
+	} else if len(ctx.QueryTrim("q")) > 0 {
+		query := ctx.QueryTrim("q")
+		var pkgs []builder.SystemPackage
+		for i, p := range meta.Packages {
+			params := levenshtein.NewParams()
+			params.BonusPrefix(16)
+			params.BonusScale(0.9)
+			if levenshtein.Similarity(p.Name, query, params) >= 0.5 {
+				pkgs = append(pkgs, meta.Packages[i])
+			}
+		}
+		ctx.Data["Packages"] = pkgs
+		ctx.Data["Cat"] = sectionBundle{
+			SectionName: "Search Results for \"" + query + "\"",
+			FAIcon:      "fas fa-search",
+		}
+	}
+
+	ctx.Data["Categories"] = sections
 
 	ctx.HTML(200, "selectpkg")
 }
@@ -185,6 +477,8 @@ func ConfigHandler(ctx *macaron.Context, sess session.Store) {
 		sessData.Version = ctx.QueryTrim("ver")
 		sessData.Kbd = ctx.QueryTrim("kbd")
 		sessData.Tz = ctx.QueryTrim("tz")
+		sessData.Script = ctx.QueryTrim("script")
+		sessData.Stringency = ctx.QueryInt("stringency")
 
 		sess.Set("sess", sessData)
 		ctx.Redirect("/config")
@@ -225,10 +519,12 @@ func ConfigHandler(ctx *macaron.Context, sess session.Store) {
 		sessData.Processed = true
 
 		sess.Set("sess", sessData)
-		ctx.Data["sess"] = sessData
 
 	}
 
+	ctx.Data["sess"] = sessData
+	ctx.Data["kbds"] = kbds
+	ctx.Data["tzs"] = tzs
 	ctx.HTML(200, "name")
 }
 
@@ -302,7 +598,6 @@ func WizardHandler(ctx *macaron.Context, sess session.Store) {
 	}
 
 	if uint32(len(wizard.Questions)) == q {
-
 		ctx.Redirect("/config")
 	}
 

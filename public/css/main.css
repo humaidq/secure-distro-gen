@@ -156,6 +156,14 @@ code, pre {
   text-decoration: none;
 }
 
+.cate {
+  display: inline-block;
+  padding: 8px 10px;
+  margin: 3px;
+  border: #ddd 1px solid;
+  text-decoration: none;
+}
+
 .btn:focus {
   border: #888 1px solid;
 }

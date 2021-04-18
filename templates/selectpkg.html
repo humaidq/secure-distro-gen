@@ -3,6 +3,8 @@
 <h2>Add/Remove Packages</h2>
 
 {{if .Cat}}
+<p><a class="btn" href="/pkgs/sel">Back</a></p>
+<h3><i class="{{.Cat.FAIcon}}"></i> {{.Cat.SectionName}}</h3>
 <p>Below you can add or remove a package from the system.</p>
 <table>
   <tr>
@@ -10,19 +12,26 @@
     <th>Version</th>
     <th>Action</th>
   </tr>
-  {{ range .meta.Packages }}
+  {{ range .Packages }}
   <tr>
     <td>{{.Name}}</td>
     <td>{{.Version}}</td>
-    <td><a href="" class="btn">{{if .Installed
-        }}Uninstall{{else}}Install{{end}}</a></td>
+    <td><a href="?do={{.Name}}" class="btn">{{if .Installed}}Uninstall{{else}}Install{{end}}</a></td>
   </tr>
   {{end}}
 </table>
 {{else}}
+<p>Select a category or search for a package.</p>
+<form>
+  <input required="1" type="text" name="q" placeholder="Search for a package..." />
+  <button class="btn" type="submit"><i class="fas fa-search"></i></button>
+</form>
+<BR>
 {{range .Categories }}
-<a href="">{{. }}</a>
+<a class="cate" href="?sec={{.SectionName}}"><i class="{{.FAIcon}}"></i> {{.SectionName }}</a>
 {{end}}
+<p><a class="cate" href="?sec=all"><i class="fas fa-list-ul"></i> View All
+  Packages</a></p>
 {{end}}
 {{ template "partials/footer" .}}
 

@@ -17,11 +17,45 @@
   default timezone. This can be changed later during installation.</p>
   <div class="form-group">
     <label for="ver">Keyboard layout:</label>
-    <input type="text" id="kbd" name="kbd" required="1" value="{{.sess.Kbd}}">
+    <select id="kbd" name="kbd" required="1">
+      {{range .kbds}}
+      <option value="{{.Code}}" {{if eq $.sess.Kbd .Code}}selected="selected"{{end}}>{{.Name}} ({{.Code}})</option>
+      {{end}}
+    </select>
   </div>
   <div class="form-group">
     <label for="ver">Default timezone:</label>
-    <input type="text" id="tz" name="tz" required="1" value="{{.sess.Tz}}">
+    <select id="tz" name="tz" required="1">
+      {{range .tzs}}
+      <option value="{{.DBName}}" {{if eq $.sess.Tz .DBName}}selected="selected"{{end}}>{{.ShortName}} ({{.DBName}})</option>
+      {{end}}
+    </select>
+  </div>
+  <h3>Security</h3>
+  <p>The stringency score determines what kind of security measures will be
+  enabled on the system. This has been initially determined by the wizard.
+  Highest stringency setting does not mean the system is fully protected, users
+  should still practice caution. <a href="">Read More</a>.</p>
+
+    <select id="stringency" name="stringency" required="1">
+      <option value="0"
+              {{if eq .sess.Stringency 0}}selected="selected"{{end}}>Basic
+              Security</option>
+      <option value="1"
+              {{if eq .sess.Stringency 1}}selected="selected"{{end}}>Moderate
+              Security</option>
+      <option value="2"
+              {{if eq .sess.Stringency 2}}selected="selected"{{end}}>High
+              Security</option>
+      <option value="3"
+              {{if eq .sess.Stringency 3}}selected="selected"{{end}}>Full
+              Security</option>
+    </select>
+  <h3>Scripts</h3>
+  <p>You may include your customisation shell script below. The script would be
+  run on the live CD disc during the customisation process.</p>
+  <div class="form-group">
+    <textarea id="script" name="script">{{.sess.Script}}</textarea>
   </div>
   <button class="btn" type="submit">Save</button>
 </form>

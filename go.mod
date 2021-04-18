@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/BurntSushi/toml v0.3.1
+	github.com/agext/levenshtein v1.2.3
 	github.com/elazarl/go-bindata-assetfs v1.0.1 // indirect
 	github.com/go-macaron/bindata v0.0.0-20200308113348-9fced76aaa6e
 	github.com/go-macaron/binding v1.1.1

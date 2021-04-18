@@ -18,7 +18,7 @@ further customise the bundle of packages.</p>
     <td>{{.Name}}</td>
     <td>{{.Version}}</td>
     <td>{{if .Action }}Uninstall{{else}}Install{{end}}</td>
-    <td><a href="#" class="btn">x</a></td>
+    <td><a href="?rm={{.Name}}" class="btn">x</a></td>
   </tr>
   {{end}}
 </table>
