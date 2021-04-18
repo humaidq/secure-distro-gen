@@ -31,11 +31,13 @@ type buildSession struct {
 
 // Customisation contains all the customisable parts of a Linux distribution.
 type Customisation struct {
-	Author            string
+	AuthorID          string
 	DistName, DistVer string
 	AddPackages       []string
 	RemovePackages    []string
 	TZ, Kbd           string
+	StringencyLevel   int
+	Script            string
 }
 
 type SystemPackage struct {
@@ -209,7 +211,7 @@ func Start(cust Customisation) (string, error) {
 	err = extract(&sess)
 	if err != nil {
 		config.Logger.Error("failed to extract",
-			zap.String("author", cust.Author),
+			zap.String("author", cust.AuthorID),
 			zap.String("tempDir", dir),
 			zap.Error(err),
 		)
@@ -221,7 +223,7 @@ func Start(cust Customisation) (string, error) {
 	err = customise(&sess)
 	if err != nil {
 		config.Logger.Error("failed to customise",
-			zap.String("author", cust.Author),
+			zap.String("author", cust.AuthorID),
 			zap.String("tempDir", dir),
 			zap.Error(err),
 		)
@@ -233,13 +235,20 @@ func Start(cust Customisation) (string, error) {
 	err = build(&sess)
 	if err != nil {
 		config.Logger.Error("failed to build",
-			zap.String("author", cust.Author),
+			zap.String("author", cust.AuthorID),
 			zap.String("tempDir", dir),
 			zap.Error(err),
 		)
 		cleanup(&sess)
 		return "", err
 	}
+
+	mkdir("./builds")
+	mkdir("./builds/" + cust.AuthorID)
+	os.Remove("./builds/final.iso")
+	_, err = exec.Command("cp", sess.tempDir+"/output.iso", "./builds/"+cust.AuthorID+"/final.iso").Output()
+
+	cleanup(&sess)
 
 	return "", nil
 }
@@ -265,8 +274,8 @@ func cleanup(sess *buildSession) {
 		}
 	}
 
-	config.Logger.Debug("Will remove all when press enter")
-	fmt.Scanln()
+	//config.Logger.Debug("Will remove all when press enter")
+	//fmt.Scanln()
 	os.RemoveAll(sess.tempDir)
 }
 

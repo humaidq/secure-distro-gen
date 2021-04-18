@@ -22,7 +22,7 @@ func test(clx *cli.Context) (err error) {
 	defer config.Logger.Sync()
 
 	cust := builder.Customisation{
-		Author:      "Humaid",
+		AuthorID:    "Humaid",
 		DistName:    "sifrOS",
 		DistVer:     "0.1.0-test",
 		AddPackages: []string{"sxiv"},

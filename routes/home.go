@@ -1,9 +1,12 @@
 package routes
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -14,6 +17,7 @@ import (
 	macaron "gopkg.in/macaron.v1"
 
 	"git.sr.ht/~humaid/linux-gen/builder"
+	"git.sr.ht/~humaid/linux-gen/config"
 	"git.sr.ht/~humaid/linux-gen/wizard"
 )
 
@@ -319,6 +323,54 @@ func BuildHandler(ctx *macaron.Context, sess session.Store) {
 		sessData = s.(sessionData)
 	}
 	ctx.Data["sess"] = sessData
+
+	if ctx.Req.Method == "POST" {
+
+		var addPkgs, rmPkgs []string
+		for i, p := range sessData.Packages {
+			if p.Action == InstallPackage {
+				addPkgs = append(addPkgs, sessData.Packages[i].Name)
+			} else {
+				rmPkgs = append(rmPkgs, sessData.Packages[i].Name)
+			}
+		}
+
+		cust := builder.Customisation{
+			AuthorID:        "web",
+			DistName:        sessData.Name,
+			DistVer:         sessData.Version,
+			AddPackages:     addPkgs,
+			RemovePackages:  rmPkgs,
+			TZ:              sessData.Tz,
+			Kbd:             sessData.Kbd,
+			StringencyLevel: sessData.Stringency,
+			Script:          sessData.Script,
+		}
+
+		c, err := json.Marshal(cust)
+
+		req, err := http.NewRequest("POST", "http://localhost:8484/api", bytes.NewBuffer(c))
+		if err != nil {
+			config.Logger.Error(err)
+			return
+		}
+		req.Header.Set("key", config.Config.SecretKey)
+
+		/*AuthorID          string
+		DistName, DistVer string
+		AddPackages       []string
+		RemovePackages    []string
+		TZ, Kbd           string*/
+
+		client := &http.Client{}
+		client.Do(req)
+		return
+	}
+
+	if stat, err := os.Stat("./builds/web/final.iso"); err == nil && !stat.IsDir() {
+		ctx.Data["HasBuild"] = true
+		ctx.Data["BuildTime"] = stat.ModTime()
+	}
 
 	ctx.HTML(200, "build")
 }

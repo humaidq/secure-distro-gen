@@ -14,6 +14,7 @@ require (
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
 	github.com/mattn/go-sqlite3 v1.14.0
 	github.com/pkg/errors v0.9.1
+	github.com/sethvargo/go-password v0.2.0
 	github.com/urfave/cli/v2 v2.3.0
 	go.uber.org/zap v1.16.0
 	gopkg.in/macaron.v1 v1.4.0

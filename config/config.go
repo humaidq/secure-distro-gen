@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/sethvargo/go-password/password"
 	"go.uber.org/zap"
 )
 
@@ -31,14 +32,20 @@ type Configuration struct {
 	SitePort    string // SitePort is the port to run the web server on.
 	OrigISOFile string // OrigISOFile is the base file used to generate the system.
 	ISOFileMD5  string // ISOFileMD5 is the md5sum of the OrigISOFile.
+	SecretKey   string // SecretKey is used for calling the builder API.
 }
 
 func newConfig() Configuration {
+	pass, err := password.Generate(64, 10, 0, false, true)
+	if err != nil {
+		panic(err)
+	}
 	return Configuration{
 		SiteName:    "CSLDG",
-		SitePort:    "8080",
+		SitePort:    "8081",
 		OrigISOFile: "base.iso",
 		ISOFileMD5:  "7f3c4465618e17104f0c76e5646c7caccb4161bc01a102ed04d34b1b4f1e4208",
+		SecretKey:   pass,
 	}
 }
 

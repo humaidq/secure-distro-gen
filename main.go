@@ -20,6 +20,7 @@ func main() {
 	app.Commands = []*cli.Command{
 		cmd.CmdStart,
 		cmd.CmdTest,
+		cmd.CmdAPI,
 		cmd.CmdMetadata,
 	}
 
