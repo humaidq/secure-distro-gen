@@ -29,7 +29,17 @@ func HomepageHandler(ctx *macaron.Context, sess session.Store) {
 
 // DownloadHandler response for the download page.
 func DownloadHandler(ctx *macaron.Context, sess session.Store) {
-	ctx.HTML(200, "download")
+	if !hasDoneWizard(sess) {
+		ctx.Redirect("/")
+		return
+	}
+
+	var sessData sessionData
+	if s := sess.Get("sess"); s != nil {
+		sessData = s.(sessionData)
+	}
+	ctx.Data["sess"] = sessData
+	ctx.ServeFile("./builds/web/final.iso")
 }
 
 type packageAction int
@@ -364,12 +374,14 @@ func BuildHandler(ctx *macaron.Context, sess session.Store) {
 
 		client := &http.Client{}
 		client.Do(req)
+		ctx.Redirect("/build")
 		return
 	}
 
 	if stat, err := os.Stat("./builds/web/final.iso"); err == nil && !stat.IsDir() {
 		ctx.Data["HasBuild"] = true
-		ctx.Data["BuildTime"] = stat.ModTime()
+		ctx.Data["BuildTime"] = stat.ModTime().Format("2 January 2006 3:04pm")
+		ctx.Data["BuildSize"] = float64(stat.Size()) / 1000000000
 	}
 
 	ctx.HTML(200, "build")

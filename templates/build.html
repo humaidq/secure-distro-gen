@@ -11,7 +11,7 @@ adjust version.</p>
 </form>
 
 <h3>Builds</h3>
-<p><small>You can currently only view the latest build to due space
+<p><small>Currently showing the latest build only, due to disk space
   constraints.</small></p>
 <table>
   <tr>
@@ -20,12 +20,21 @@ adjust version.</p>
     <th>Size</th>
     <th></th>
   </tr>
+  {{if .HasBuild}}
   <tr>
-    <td>sifrOS v0.1.0</td>
-    <td>03 Apr 2021 12:13pm GMT</td>
-    <td>2.2 GB</td>
-    <td><a href="#" class="btn">Download</a></td>
+    <td>{{.sess.Name}} build</td>
+    <td>{{.BuildTime}}</td>
+    <td>{{.BuildSize}} GB</td>
+    <td><a href="/download/final.iso" class="btn">Download</a></td>
   </tr>
+  {{else}}
+  <tr>
+    <td><small>No builds...</small></td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+  {{end}}
 </table>
 
 {{ template "partials/footer" .}}

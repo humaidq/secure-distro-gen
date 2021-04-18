@@ -62,8 +62,7 @@ func start(clx *cli.Context) (err error) {
 	m.Get("/pkgs/sel", routes.SelectPackageHandler)
 	m.Get("/build", routes.BuildHandler)
 	m.Post("/build", routes.BuildHandler)
-
-	m.Get("/download", routes.DownloadHandler)
+	m.Get("/download/:name.iso", routes.DownloadHandler)
 
 	log.Printf("Starting web server on port %s\n", config.Config.SitePort)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", config.Config.SitePort), m))
