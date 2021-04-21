@@ -1,5 +1,8 @@
 {{ template "partials/header" .}}
 {{ template "partials/configbar" . }}
+{{if .Progress}}
+<meta http-equiv="refresh" content="1">
+{{end}}
 <h2>Build</h2>
 <p>Once you have completed customising your system above, you may build your
 system.</p>
@@ -7,7 +10,11 @@ system.</p>
 <p>Ready to build {{.sess.Name}} {{.sess.Version}}. Visit configuration page to
 adjust version.</p>
 <form method="post">
+  {{if .Progress}}
+  <p><b>Build in progress:</b> {{.Progress}}</p>
+  {{else}}
 <p><button type="submit" class="btn">Build ISO</button></p>
+  {{end}}
 </form>
 
 <h3>Builds</h3>
@@ -25,7 +32,11 @@ adjust version.</p>
     <td>{{.sess.Name}} build</td>
     <td>{{.BuildTime}}</td>
     <td>{{.BuildSize}} GB</td>
-    <td><a href="/download/final.iso" class="btn">Download</a></td>
+    <td>
+      <a href="/download/final.iso" class="btn">Download</a>
+      <a href="/download/sha256sum.txt" class="btn">Hash</a>
+      <a href="/download/sha256sum.sig" class="btn">Sig</a>
+    </td>
   </tr>
   {{else}}
   <tr>

@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"git.sr.ht/~humaid/linux-gen/config"
@@ -49,6 +50,19 @@ type SystemPackage struct {
 type SystemMetadata struct {
 	Packages  []SystemPackage
 	Timezones []string
+}
+
+var maxProg int = 16
+
+func setProgress(sess *buildSession, status string, prog int) {
+	mkdir("./builds")
+	mkdir("./builds/" + sess.cust.AuthorID)
+	if maxProg == prog || maxProg == -1 {
+		writeToFile("./builds/"+sess.cust.AuthorID+"/prog", "Complete")
+	} else {
+		tot := int((float64(prog) / float64(maxProg)) * 100)
+		writeToFile("./builds/"+sess.cust.AuthorID+"/prog", status+" ("+strconv.Itoa(tot)+"%)")
+	}
 }
 
 func GetMetadata() (SystemMetadata, error) {
@@ -202,6 +216,7 @@ func Start(cust Customisation) (string, error) {
 		cust:       cust,
 	}
 
+	setProgress(&sess, "Preparing...", 1)
 	if _, err := os.Stat(dir); err == nil {
 		cleanup(&sess)
 	}
@@ -218,6 +233,7 @@ func Start(cust Customisation) (string, error) {
 		cleanup(&sess)
 		return "", err
 	}
+	setProgress(&sess, "Customising", 5)
 
 	config.Logger.Debug("start customise")
 	err = customise(&sess)
@@ -230,7 +246,10 @@ func Start(cust Customisation) (string, error) {
 		cleanup(&sess)
 		return "", err
 	}
+	config.Logger.Debug("Will build after press enter")
+	fmt.Scanln()
 
+	setProgress(&sess, "Building", 9)
 	config.Logger.Debug("start build")
 	err = build(&sess)
 	if err != nil {
@@ -243,12 +262,16 @@ func Start(cust Customisation) (string, error) {
 		return "", err
 	}
 
+	setProgress(&sess, "Finalising...", 15)
 	mkdir("./builds")
 	mkdir("./builds/" + cust.AuthorID)
 	os.Remove("./builds/final.iso")
 	_, err = exec.Command("cp", sess.tempDir+"/output.iso", "./builds/"+cust.AuthorID+"/final.iso").Output()
+	o, _ := execc("./builds/"+cust.AuthorID+"/final.iso", "sha256sum", "final.iso")
+	writeToFile("./builds/"+cust.AuthorID+"/sha256sum.txt", o)
 
 	cleanup(&sess)
+	setProgress(&sess, "Complete", 16)
 
 	return "", nil
 }
@@ -274,8 +297,8 @@ func cleanup(sess *buildSession) {
 		}
 	}
 
-	//config.Logger.Debug("Will remove all when press enter")
-	//fmt.Scanln()
+	config.Logger.Debug("Will remove all when press enter")
+	fmt.Scanln()
 	os.RemoveAll(sess.tempDir)
 }
 

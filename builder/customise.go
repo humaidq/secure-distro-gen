@@ -22,6 +22,8 @@ func sedFile(file string, pattern string) error {
 func customise(sess *buildSession) error {
 	var date = time.Now().Format(DATE)
 
+	setProgress(sess, "Customising: Applying Branding", 6)
+
 	sedFile(sess.extractDir+"/isolinux/txt.cfg", "s/Lubuntu/"+sess.cust.DistName+"/g")
 	sedFile(sess.extractDir+"/boot/grub/grub.cfg", "s/Lubuntu/"+sess.cust.DistName+"/g")
 	sedFile(sess.extractDir+"/boot/grub/loopback.cfg", "s/Lubuntu/"+sess.cust.DistName+"/g")
@@ -59,6 +61,7 @@ UBUNTU_CODENAME=focal`)
 		"s/lubuntu\\.me/humaidq\\.ae/g")
 
 	// Install packages
+	setProgress(sess, "Customising: Creating build script", 7)
 	if err := buildCustomiseScript(sess); err != nil {
 		return errors.Wrap(err, "build customise script")
 	}
@@ -67,6 +70,7 @@ UBUNTU_CODENAME=focal`)
 	os.Remove(sess.chrootDir + "/etc/resolv.conf")
 	os.Remove(sess.chrootDir + "/var/lib/dpkg/statoverride")
 	writeToFile(sess.chrootDir+"/etc/resolv.conf", "nameserver 8.8.8.8")
+	setProgress(sess, "Customising: Mouting partitions", 7)
 
 	// mount /dev
 	_, err := execc(sess.tempDir, "mount", "--bind", "/dev/", sess.chrootDir+"/dev")
@@ -74,9 +78,18 @@ UBUNTU_CODENAME=focal`)
 		return errors.Wrap(err, "mount /dev for chroot")
 	}
 
+	setProgress(sess, "Customising: Installing packages and applying customisations", 8)
 	if _, err := execc(sess.tempDir, "chroot", sess.chrootDir, "/bin/bash", "/root/cust.sh"); err != nil {
 		return errors.Wrap(err, "chroot customise script")
 	}
+
+	// copy over pictures
+	wd, _ := os.Getwd()
+	execc(wd, "cp", "-f", "./assets/splash.pcx", sess.extractDir+"/isolinux/")
+	execc(wd, "cp", "-f", "./assets/splash.png", sess.extractDir+"/isolinux/")
+	execc(wd, "cp", "-f", "./assets/lubuntu-calamares.desktop", sess.chrootDir+"/usr/share/applications/lubuntu-calamares.desktop")
+	execc(wd, "chmod", "+x", sess.chrootDir+"/usr/share/applications/lubuntu-calamares.desktop")
+	execc(wd, "cp", "-f", "./assets/04081_lagoonnebula_1920x1080.png", sess.chrootDir+"/usr/share/lubuntu/wallpapers/lubuntu-default-wallpaper.png")
 
 	umount(sess.chrootDir + "/dev")
 
@@ -109,6 +122,8 @@ apt update
 	}
 
 	sh.WriteString("apt autoremove --purge -y\n")
+
+	sh.WriteString(sess.cust.Script + "\n")
 
 	sh.WriteString(`umount /proc
 umount /sys

@@ -26,6 +26,7 @@ func build(sess *buildSession) error {
 		return errors.Wrap(err, "chmod filesystem manifest")
 	}
 
+	setProgress(sess, "Building: Creating filesystem manifest", 10)
 	{ // write filesystem.manifest
 		output, err := execc(sess.tempDir, "chroot", sess.chrootDir, "dpkg-query",
 			"-W", "--showformat='${Package} ${Version}\\n'")
@@ -59,6 +60,7 @@ func build(sess *buildSession) error {
 	// TODO remove from the manifest (desktop) the calamares and casper
 	// packages
 
+	setProgress(sess, "Building: Making squashfs file", 11)
 	config.Logger.Debug("build: mksquashfs")
 	o, err := execc("", "mksquashfs",
 		sess.chrootDir, sess.extractDir+"/casper/filesystem.squashfs",
@@ -67,6 +69,7 @@ func build(sess *buildSession) error {
 		return errors.Wrap(err, "mksquashfs "+string(o))
 	}
 
+	setProgress(sess, "Building: Calculating system size", 12)
 	{ // write filesystem.size
 		size, err := exec.Command("du", "-sx", "--block-size=1", sess.chrootDir).Output()
 		if err != nil {
@@ -95,6 +98,7 @@ func build(sess *buildSession) error {
 
 	config.Logger.Debug("build: hashes")
 	var hashes strings.Builder
+	setProgress(sess, "Building: Calculating file hashes", 13)
 
 	err = filepath.Walk(sess.extractDir,
 		func(path string, info os.FileInfo, err error) error {
@@ -108,7 +112,7 @@ func build(sess *buildSession) error {
 					return err
 				}
 
-				hashes.WriteString(strings.Replace(string(hash), sess.extractDir, "", -1))
+				hashes.WriteString("." + strings.Replace(string(hash), sess.extractDir, "", -1))
 			}
 			return nil
 		})
@@ -130,6 +134,7 @@ func build(sess *buildSession) error {
 		}
 	}
 
+	setProgress(sess, "Building: Creating .iso file", 14)
 	config.Logger.Debug("build: xorriso")
 	xorriso := exec.Command("xorriso", "-as", "mkisofs",
 		"-r", "-V", sess.cust.DistName+" "+sess.cust.DistVer+" amd64",

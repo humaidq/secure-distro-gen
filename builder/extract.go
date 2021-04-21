@@ -40,6 +40,7 @@ func extract(sess *buildSession) error {
 	mkdir(sess.mountDir)
 	mkdir(sess.extractDir)
 
+	setProgress(sess, "Extracting: mounting ISO", 2)
 	config.Logger.Debug("extract: mount ISO")
 	// mount the ISO file
 	_, err = exec.Command("mount", "-o", "loop", config.Config.OrigISOFile,
@@ -50,6 +51,7 @@ func extract(sess *buildSession) error {
 
 	config.Logger.Debug(sess.mountDir, sess.extractDir)
 	config.Logger.Debug("extract: rsync")
+	setProgress(sess, "Extracting: rsync", 3)
 
 	// copy contents to extract folder
 	o, err := execc("", "rsync", "--exclude=/casper/filesystem.squashfs",
@@ -59,12 +61,14 @@ func extract(sess *buildSession) error {
 		//return errors.Wrap(err, "copy contents (rsync) "+o)
 	}
 
+	setProgress(sess, "Extracting: unsquashfs", 3)
 	config.Logger.Debug("extract: unsquashfs")
 	o, err = execc(sess.tempDir, "unsquashfs",
 		sess.mountDir+"/casper/filesystem.squashfs")
 	if err != nil {
 		return errors.Wrap(err, "unsquashfs: "+o)
 	}
+	setProgress(sess, "Extracting: unmounting and cleaning up", 4)
 
 	os.Rename(sess.tempDir+"/squashfs-root", sess.chrootDir)
 

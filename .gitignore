@@ -1,5 +1,8 @@
 *.iso
 *.img
+*.pub
+*.sec
+builds/
 metadata.json
 temp/
 linux-gen

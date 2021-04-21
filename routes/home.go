@@ -39,7 +39,16 @@ func DownloadHandler(ctx *macaron.Context, sess session.Store) {
 		sessData = s.(sessionData)
 	}
 	ctx.Data["sess"] = sessData
-	ctx.ServeFile("./builds/web/final.iso")
+	name := ctx.Params("name")
+	switch name {
+	case "final.iso":
+		ctx.ServeFile("./builds/web/final.iso")
+	case "sha256sum.txt":
+		ctx.ServeFile("./builds/web/sha256sum.txt")
+	case "sha256sum.sig":
+		ctx.ServeFile("./builds/web/sha256sum.sig")
+	}
+	ctx.PlainText(400, []byte("invalid file"))
 }
 
 type packageAction int
@@ -376,6 +385,12 @@ func BuildHandler(ctx *macaron.Context, sess session.Store) {
 		client.Do(req)
 		ctx.Redirect("/build")
 		return
+	}
+
+	if a, err := ioutil.ReadFile("./builds/web/prog"); err == nil {
+		if string(a) != "Complete" {
+			ctx.Data["Progress"] = string(a)
+		}
 	}
 
 	if stat, err := os.Stat("./builds/web/final.iso"); err == nil && !stat.IsDir() {
