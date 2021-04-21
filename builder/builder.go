@@ -246,8 +246,6 @@ func Start(cust Customisation) (string, error) {
 		cleanup(&sess)
 		return "", err
 	}
-	config.Logger.Debug("Will build after press enter")
-	fmt.Scanln()
 
 	setProgress(&sess, "Building", 9)
 	config.Logger.Debug("start build")
@@ -297,8 +295,8 @@ func cleanup(sess *buildSession) {
 		}
 	}
 
-	config.Logger.Debug("Will remove all when press enter")
-	fmt.Scanln()
+	//config.Logger.Debug("Will remove all when press enter")
+	//fmt.Scanln()
 	os.RemoveAll(sess.tempDir)
 }
 

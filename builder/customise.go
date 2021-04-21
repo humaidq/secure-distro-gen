@@ -91,6 +91,18 @@ UBUNTU_CODENAME=focal`)
 	execc(wd, "chmod", "+x", sess.chrootDir+"/usr/share/applications/lubuntu-calamares.desktop")
 	execc(wd, "cp", "-f", "./assets/04081_lagoonnebula_1920x1080.png", sess.chrootDir+"/usr/share/lubuntu/wallpapers/lubuntu-default-wallpaper.png")
 
+	if sess.cust.StringencyLevel >= 2 {
+		sedFile(sess.chrootDir+"/etc/adduser.conf", `/^DIR_MODE=/ s/=[0-9]*\+/=0700/`)
+		sedFile(sess.chrootDir+"/etc/login.defs", `/^UMASK\s\+/ s/022/077/`)
+		mkdir(sess.chrootDir + "/etc/skel/.mozilla")
+		mkdir(sess.chrootDir + "/etc/skel/.mozilla/firefox")
+		execc(wd, "cp", "-r", "./assets/qsebcm8n.os", sess.chrootDir+"/etc/skel/.mozilla/firefox/")
+		execc(wd, "cp", "-r", "./assets/installs.ini", sess.chrootDir+"/etc/skel/.mozilla/firefox/")
+		execc(wd, "cp", "-r", "./assets/profiles.ini", sess.chrootDir+"/etc/skel/.mozilla/firefox/")
+	} else if sess.cust.StringencyLevel >= 3 {
+		sedFile(sess.chrootDir+"/etc/login.defs", `/^UMASK\s\+/ s/022/077/`)
+	}
+
 	umount(sess.chrootDir + "/dev")
 
 	return nil
@@ -113,10 +125,30 @@ apt update
 
 `)
 
+	if sess.cust.StringencyLevel >= 1 {
+		sess.cust.AddPackages = append(sess.cust.AddPackages, "ufw")
+		sess.cust.AddPackages = append(sess.cust.AddPackages, "libpam-cracklib")
+		sess.cust.AddPackages = append(sess.cust.AddPackages, "libpam-pwquality")
+	}
+	if sess.cust.StringencyLevel >= 3 {
+		sess.cust.AddPackages = append(sess.cust.AddPackages, "usbguard")
+	}
 	for _, pkg := range sess.cust.AddPackages {
 		sh.WriteString("apt install -y " + pkg + "\n")
 	}
 
+	if sess.cust.StringencyLevel >= 1 {
+		sh.WriteString("ufw enable\n")
+	}
+
+	if sess.cust.StringencyLevel >= 2 {
+		sh.WriteString(`echo "TMOUT=\"\$(( 60*10 ))\";\n[ -z \"$DISPLAY\" ] && export TMOUT;\ncase \$( /usr/bin/tty ) in\n	/dev/tty[0-9]*) export TMOUT;;\nesac" | tee -a /etc/skel/.bashrc`)
+	}
+
+	sess.cust.RemovePackages = append(sess.cust.RemovePackages, "whoopsie")
+	sess.cust.RemovePackages = append(sess.cust.RemovePackages, "apport")
+	sess.cust.RemovePackages = append(sess.cust.RemovePackages, "apport-symptoms")
+	sess.cust.RemovePackages = append(sess.cust.RemovePackages, "popularity-contest")
 	for _, pkg := range sess.cust.RemovePackages {
 		sh.WriteString("apt purge -y " + pkg + "\n")
 	}
